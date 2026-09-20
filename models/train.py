@@ -42,8 +42,14 @@ FEATURE_COLUMNS = (
         "points_scored_venue_avg", "points_allowed_venue_avg",
     ]]
     + ["home_rest", "away_rest", "div_game", "home_srs", "away_srs", "srs_diff",
-       "spread_line", "total_line"]
+       "spread_line", "total_line", "temp", "wind"]
 )
+
+# roof/surface are categorical (cleaned to fixed string categories in
+# features/build_features.py); one-hot encoded on load, then their dummy
+# column names get appended to FEATURE_COLUMNS in main() since they aren't
+# known statically.
+CATEGORICAL_COLUMNS = ["roof", "surface"]
 
 
 def load_dataset() -> pd.DataFrame:
@@ -51,7 +57,16 @@ def load_dataset() -> pd.DataFrame:
         df = pd.read_sql("SELECT * FROM game_features", conn)
     df = df.dropna(subset=[TARGET_COL]).copy()
     df[TARGET_COL] = df[TARGET_COL].astype(int)
+    # Encoding categories (roof types, surface types) is a fixed, physical
+    # property of the venue, not something learned from outcomes -- safe to
+    # one-hot on the full dataset before the train/test split.
+    df = pd.get_dummies(df, columns=CATEGORICAL_COLUMNS, prefix=CATEGORICAL_COLUMNS)
     return df
+
+
+def dummy_columns(df: pd.DataFrame) -> list[str]:
+    prefixes = tuple(f"{c}_" for c in CATEGORICAL_COLUMNS)
+    return [c for c in df.columns if c.startswith(prefixes)]
 
 
 def season_split(df: pd.DataFrame):
@@ -118,12 +133,13 @@ def evaluate_model(name: str, model, X_test: pd.DataFrame, y_test: pd.Series, te
 
 def main():
     df = load_dataset()
+    feature_columns = FEATURE_COLUMNS + dummy_columns(df)
     train_df, test_df = season_split(df)
     print(f"Train: {len(train_df)} games (seasons < {TEST_START_SEASON}); "
           f"Test: {len(test_df)} games (seasons >= {TEST_START_SEASON})")
 
-    X_train, y_train = train_df[FEATURE_COLUMNS], train_df[TARGET_COL]
-    X_test, y_test = test_df[FEATURE_COLUMNS], test_df[TARGET_COL]
+    X_train, y_train = train_df[feature_columns], train_df[TARGET_COL]
+    X_test, y_test = test_df[feature_columns], test_df[TARGET_COL]
 
     logreg = train_logistic_regression(X_train, y_train)
     xgb = train_xgboost(X_train, y_train)
@@ -138,7 +154,7 @@ def main():
     results_df.to_csv(ARTIFACTS_DIR / "model_eval_summary.csv", index=False)
     joblib.dump(logreg, ARTIFACTS_DIR / "logistic_regression.joblib")
     joblib.dump(xgb, ARTIFACTS_DIR / "xgboost.joblib")
-    joblib.dump(FEATURE_COLUMNS, ARTIFACTS_DIR / "feature_columns.joblib")
+    joblib.dump(feature_columns, ARTIFACTS_DIR / "feature_columns.joblib")
     print(f"Saved models and summary to {ARTIFACTS_DIR}")
 
 

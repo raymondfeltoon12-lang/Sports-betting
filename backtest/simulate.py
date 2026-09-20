@@ -13,7 +13,7 @@ import pandas as pd
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 from backtest.kelly import american_to_decimal, kelly_fraction
 from config import KELLY_MULTIPLIER, MAX_BET_FRACTION, ROOT_DIR, STARTING_BANKROLL
-from models.train import FEATURE_COLUMNS, load_dataset, season_split
+from models.train import load_dataset, season_split
 
 MODELS_DIR = ROOT_DIR / "models" / "artifacts"
 RESULTS_DIR = ROOT_DIR / "backtest" / "results"
@@ -112,7 +112,8 @@ def summarize(bet_log: pd.DataFrame, model_name: str, kelly_multiplier: float) -
 
 def run_backtest_for_model(model_name: str, test_df: pd.DataFrame, kelly_multiplier: float) -> dict:
     model = joblib.load(MODELS_DIR / f"{model_name}.joblib")
-    probs = model.predict_proba(test_df[FEATURE_COLUMNS])[:, 1]
+    feature_columns = joblib.load(MODELS_DIR / "feature_columns.joblib")
+    probs = model.predict_proba(test_df[feature_columns])[:, 1]
     bet_log = simulate(test_df, probs, kelly_multiplier)
     tag = f"{model_name}_k{kelly_multiplier}"
     bet_log.to_csv(RESULTS_DIR / f"bet_log_{tag}.csv", index=False)

@@ -22,6 +22,22 @@ from features.srs import compute_srs_asof
 # columns as "features" would leak the outcome being predicted.
 PREGAME_FEATURE_SUFFIXES = ("_avg5", "_avg10", "_venue_avg")
 
+INDOOR_ROOFS = ("dome", "closed")
+
+
+def _clean_weather(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["roof"] = df["roof"].replace({"None": pd.NA}).fillna("unknown").str.strip()
+    df["surface"] = df["surface"].replace({"None": pd.NA}).fillna("unknown").str.strip()
+    # Indoor games have no weather effect -- filling with the outdoor-game
+    # median would bias the "temp"/"wind" columns for dome games, since a
+    # dome always plays like ~70F and no wind, not an average of outdoor
+    # conditions it never sees.
+    indoor = df["roof"].isin(INDOOR_ROOFS)
+    df.loc[indoor & df["temp"].isna(), "temp"] = 70.0
+    df.loc[indoor & df["wind"].isna(), "wind"] = 0.0
+    return df
+
 
 def _side_frame(team_features: pd.DataFrame, is_home: int, prefix: str) -> pd.DataFrame:
     side = team_features[team_features["is_home"] == is_home].copy()
@@ -36,6 +52,7 @@ def build_game_features() -> pd.DataFrame:
         games = pd.read_sql("SELECT * FROM games", conn)
         team_stats = pd.read_sql("SELECT * FROM team_game_stats", conn)
 
+    games = _clean_weather(games)
     team_features = build_team_features(team_stats)
 
     home_side = _side_frame(team_features, is_home=1, prefix="home")

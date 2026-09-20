@@ -10,6 +10,9 @@ DATA_DIR = ROOT_DIR / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 DB_PATH = DATA_DIR / "nfl_betting.db"
+# Tracked in git (unlike the db, which regenerates from nfl_data_py): live
+# odds snapshots capture a moment in time and can't be recreated later.
+ODDS_SNAPSHOT_CSV = PROCESSED_DIR / "odds_snapshots.csv"
 
 RAW_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
@@ -19,7 +22,7 @@ PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 # noisier pre-2010 (rule changes, tracking gaps), so default to a recent
 # 11-season window. Override with env vars if you want more/less history.
 START_SEASON = int(os.getenv("START_SEASON", "2015"))
-END_SEASON = int(os.getenv("END_SEASON", "2025"))
+END_SEASON = int(os.getenv("END_SEASON", "2026"))
 SEASONS = list(range(START_SEASON, END_SEASON + 1))
 
 # Chronological train/test split: seasons before this are training data,

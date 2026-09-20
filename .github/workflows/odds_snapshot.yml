@@ -1,0 +1,35 @@
+name: Odds snapshot
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch odds snapshot
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python -m data.fetch_odds_api
+
+      - name: Commit snapshot if changed
+        run: |
+          git config user.name "odds-snapshot-bot"
+          git config user.email "actions@github.com"
+          git add data/processed/odds_snapshots.csv
+          git diff --staged --quiet || git commit -m "chore: odds snapshot $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push

@@ -2,6 +2,11 @@
 snapshots (see data/fetch_odds_api.py). Historical seasons have no opening
 line on record -- nfl_data_py only gives us the closing line -- so this will
 be all-NaN until enough live snapshots accumulate for upcoming games.
+
+Reads from the tracked CSV (data/processed/odds_snapshots.csv), not the
+local SQLite db: snapshots capture a moment in time and can't be
+regenerated, so they're committed to git and shared across environments
+(e.g. the scheduled GitHub Actions job), unlike the db file itself.
 """
 
 import sys
@@ -10,18 +15,28 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
-from data.db import get_connection
+from config import ODDS_SNAPSHOT_CSV
 
 
 def load_line_movement() -> pd.DataFrame:
-    with get_connection() as conn:
-        snapshots = pd.read_sql("SELECT * FROM odds_snapshots", conn)
+    empty = pd.DataFrame(columns=["home_team", "away_team", "commence_time", "opening_spread", "closing_spread", "line_movement"])
+    if not ODDS_SNAPSHOT_CSV.exists():
+        return empty
 
+    snapshots = pd.read_csv(ODDS_SNAPSHOT_CSV)
     if snapshots.empty:
-        return pd.DataFrame(columns=["home_team", "away_team", "commence_time", "opening_spread", "closing_spread", "line_movement"])
+        return empty
 
-    snapshots = snapshots.sort_values("fetched_at")
-    grouped = snapshots.groupby(["home_team", "away_team", "commence_time"])["home_spread"]
+    # Collapse across sportsbooks to a per-round consensus line first, so
+    # "opening" and "closing" aren't accidentally comparing two different
+    # books' numbers.
+    consensus = (
+        snapshots.groupby(["home_team", "away_team", "commence_time", "fetched_at"])["home_spread"]
+        .median()
+        .reset_index()
+        .sort_values("fetched_at")
+    )
+    grouped = consensus.groupby(["home_team", "away_team", "commence_time"])["home_spread"]
     movement = grouped.agg(opening_spread="first", closing_spread="last").reset_index()
     movement["line_movement"] = movement["closing_spread"] - movement["opening_spread"]
     return movement

@@ -23,6 +23,12 @@ GAME_COLUMNS = [
 
 SCRIMMAGE_PLAYS = ("pass", "run")
 
+# nfl_data_py's schedules use the historical team code for the season it was
+# played (e.g. "OAK" in 2019), but its play-by-play always uses the current
+# franchise code (e.g. "LV"). Normalize schedules to the modern code so both
+# tables join on a consistent team identity across relocations.
+TEAM_ABBR_MAP = {"OAK": "LV", "SD": "LAC", "STL": "LA"}
+
 
 def fetch_schedules() -> pd.DataFrame:
     df = nfl.import_schedules(SEASONS)
@@ -30,6 +36,8 @@ def fetch_schedules() -> pd.DataFrame:
         if col not in df.columns:
             df[col] = None
     df["div_game"] = df["div_game"].fillna(0).astype(int)
+    df["home_team"] = df["home_team"].replace(TEAM_ABBR_MAP)
+    df["away_team"] = df["away_team"].replace(TEAM_ABBR_MAP)
     return df[GAME_COLUMNS]
 
 

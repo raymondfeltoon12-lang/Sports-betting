@@ -22,6 +22,11 @@ START_SEASON = int(os.getenv("START_SEASON", "2015"))
 END_SEASON = int(os.getenv("END_SEASON", "2025"))
 SEASONS = list(range(START_SEASON, END_SEASON + 1))
 
+# Chronological train/test split: seasons before this are training data,
+# this season and later are held out for testing/backtesting. Never split
+# randomly -- that would leak future-season information into training.
+TEST_START_SEASON = int(os.getenv("TEST_START_SEASON", "2023"))
+
 # The Odds API (https://the-odds-api.com) - free tier: current/upcoming odds
 # only, 500 requests/month. Historical odds endpoint requires a paid plan,
 # so this is used to snapshot live lines going forward (opening vs closing

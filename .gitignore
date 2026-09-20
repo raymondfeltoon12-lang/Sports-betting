@@ -10,3 +10,4 @@ data/processed/*.parquet
 .ipynb_checkpoints/
 *.egg-info/
 .DS_Store
+models/artifacts/*.joblib

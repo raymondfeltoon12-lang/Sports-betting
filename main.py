@@ -7,7 +7,7 @@ import argparse
 from backtest import simulate as backtest_simulate
 from data import fetch_nfl_data, fetch_odds_api
 from features import build_features
-from models import train as train_models
+from models import predict_upcoming, train as train_models
 
 
 def run_pipeline(with_live_odds: bool = False):
@@ -17,6 +17,7 @@ def run_pipeline(with_live_odds: bool = False):
     build_features.main()
     train_models.main()
     backtest_simulate.main()
+    predict_upcoming.main()
 
 
 if __name__ == "__main__":

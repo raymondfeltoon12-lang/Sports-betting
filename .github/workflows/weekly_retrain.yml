@@ -21,13 +21,15 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run full pipeline (data, features, models, backtest)
-        run: python main.py
+      - name: Run full pipeline (data, features, models, backtest, picks)
+        run: python main.py --with-live-odds
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
 
-      - name: Commit updated eval/backtest summaries if changed
+      - name: Commit updated eval/backtest/picks summaries if changed
         run: |
           git config user.name "weekly-retrain-bot"
           git config user.email "actions@github.com"
-          git add models/artifacts/model_eval_summary.csv backtest/results/backtest_summary.csv
+          git add models/artifacts/model_eval_summary.csv backtest/results/backtest_summary.csv data/processed/upcoming_picks.csv
           git diff --staged --quiet || git commit -m "chore: weekly retrain $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push

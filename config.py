@@ -27,6 +27,11 @@ SEASONS = list(range(START_SEASON, END_SEASON + 1))
 # randomly -- that would leak future-season information into training.
 TEST_START_SEASON = int(os.getenv("TEST_START_SEASON", "2023"))
 
+# Backtesting / Kelly sizing
+STARTING_BANKROLL = float(os.getenv("STARTING_BANKROLL", "10000"))
+KELLY_MULTIPLIER = float(os.getenv("KELLY_MULTIPLIER", "1.0"))  # 0.5 = half-Kelly
+MAX_BET_FRACTION = float(os.getenv("MAX_BET_FRACTION", "0.2"))  # cap per-bet stake as a guard rail
+
 # The Odds API (https://the-odds-api.com) - free tier: current/upcoming odds
 # only, 500 requests/month. Historical odds endpoint requires a paid plan,
 # so this is used to snapshot live lines going forward (opening vs closing

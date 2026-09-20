@@ -11,3 +11,4 @@ data/processed/*.parquet
 *.egg-info/
 .DS_Store
 models/artifacts/*.joblib
+backtest/results/bet_log_*.csv
